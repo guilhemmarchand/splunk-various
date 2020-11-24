@@ -1,0 +1,362 @@
+<form>
+  <label>Splunk Data Models comparator</label>
+  <search id="populate">
+    <query>| rest /services/datamodel/model
+| stats c by eai:acl.app, title</query>
+  </search>
+  <search id="baseSearch">
+    <query>| datamodel $source_dm$
+
+`comment("---- Get the _raw ----")`
+| table _raw
+| fields _raw
+
+`comment("---- Get spath to extract json objects ----")`
+| spath
+
+`comment("---- Compute calculated fields ----")`
+| eval AAA=mvzip('objects{}.calculations{}.owner', 'objects{}.calculations{}.outputFields{}.fieldName', "|")
+| eval AAA=mvzip(AAA, 'objects{}.calculations{}.outputFields{}.displayName', "|")
+| eval AAA=mvzip(AAA, 'objects{}.calculations{}.outputFields{}.type', "|")
+| eval AAA=mvzip(AAA, 'objects{}.calculations{}.expression', "|")
+
+`comment("---- Compute extracted fields ----")`
+| eval BBB=mvzip('objects{}.fields{}.owner', 'objects{}.fields{}.fieldName', "|")
+| eval BBB=mvzip(BBB, 'objects{}.fields{}.displayName', "|")
+| eval BBB=mvzip(BBB, 'objects{}.fields{}.type', "|")
+
+`comment("---- Keep both ----")`
+| fields modelName AAA BBB | fields - _raw
+
+`comment("---- Concat as one ----")`
+| eval CCC=mvappend(AAA, BBB)
+| fields modelName CCC
+
+`comment("---- Expand ----")`
+| mvexpand CCC
+
+`comment("---- Extract based on our structure ----")`
+| rex field=CCC "^(?&lt;nodeName&gt;[^\|]*)\|(?&lt;fieldName&gt;[^\|]*)\|(?&lt;fieldDisplayName&gt;[^\|]*)\|(?&lt;type&gt;[^\|]*)\|{0,1}(?&lt;evalExpression&gt;[^\|]*)?"
+
+`comment("---- Render ----")`
+| fields modelName nodeName fieldName fieldDisplayName type evalExpression
+
+`comment("---- take BaseEvent out ----")`
+| where nodeName!="BaseEvent"
+
+`comment("---- get nodeNames for source by field for anomaly comparison ----")`
+| eventstats values(nodeName) as nodeNames_source by fieldName | eval nodeNames_source=mvjoin(mvsort(mvdedup(nodeNames_source)), "|")
+| eventstats values(fieldName) as fieldName_source | eval fieldName_source=mvjoin(mvsort(fieldName_source), "|")
+
+| sort 0 nodeName fieldName
+
+| append [ | datamodel $target_dm$
+
+`comment("---- Get the _raw ----")`
+| table _raw
+| fields _raw
+
+`comment("---- Get spath to extract json objects ----")`
+| spath
+
+`comment("---- Compute calculated fields ----")`
+| eval AAA=mvzip('objects{}.calculations{}.owner', 'objects{}.calculations{}.outputFields{}.fieldName', "|")
+| eval AAA=mvzip(AAA, 'objects{}.calculations{}.outputFields{}.displayName', "|")
+| eval AAA=mvzip(AAA, 'objects{}.calculations{}.outputFields{}.type', "|")
+| eval AAA=mvzip(AAA, 'objects{}.calculations{}.expression', "|")
+
+`comment("---- Compute extracted fields ----")`
+| eval BBB=mvzip('objects{}.fields{}.owner', 'objects{}.fields{}.fieldName', "|")
+| eval BBB=mvzip(BBB, 'objects{}.fields{}.displayName', "|")
+| eval BBB=mvzip(BBB, 'objects{}.fields{}.type', "|")
+
+`comment("---- Keep both ----")`
+| fields modelName AAA BBB | fields - _raw
+
+`comment("---- Concat as one ----")`
+| eval CCC=mvappend(AAA, BBB)
+| fields displayName modelName CCC
+
+`comment("---- Expand ----")`
+| mvexpand CCC
+
+`comment("---- Extract based on our structure ----")`
+| rex field=CCC "^(?&lt;nodeName&gt;[^\|]*)\|(?&lt;fieldName&gt;[^\|]*)\|(?&lt;fieldDisplayName&gt;[^\|]*)\|(?&lt;type&gt;[^\|]*)\|{0,1}(?&lt;evalExpression&gt;[^\|]*)?"
+
+`comment("---- Render ----")`
+| fields modelName nodeName fieldName fieldDisplayName type evalExpression
+
+`comment("---- take BaseEvent out ----")`
+| where nodeName!="BaseEvent"
+
+`comment("---- get nodeNames for source by field for anomaly comparison ----")`
+| eventstats values(nodeName) as nodeNames_target by fieldName | eval nodeNames_target=mvjoin(mvsort(mvdedup(nodeNames_target)), "|")
+| eventstats values(fieldName) as fieldName_target | eval fieldName_target=mvjoin(mvsort(fieldName_target), "|")
+
+| sort 0 nodeName fieldName ]
+
+| stats values(*) as "*" by fieldName
+
+| eventstats dc(modelName) as is_common by fieldName
+
+| eval is_anomaly=case(isnull(nodeNames_source) OR isnull(nodeNames_target), 1, isnotnull(nodeNames_source) AND isnotnull(nodeNames_target) AND nodeNames_source=nodeNames_target, 1, isnotnull(nodeNames_source) AND isnotnull(nodeNames_target) AND nodeNames_source!=nodeNames_target, 2)</query>
+  </search>
+  <search base="baseSearch" id="baseSearch_commonA">
+    <query>| where match(modelName, "^$source_dm$$") AND is_common=1 | stats values(fieldName) as fields | eval fields=mvjoin(mvsort(fields), ", ")</query>
+    <progress>
+        <condition match="'job.resultCount' == 0">
+            <unset token="show_commonA"></unset>
+        </condition>
+        <condition>
+            <set token="show_commonA">True</set>
+        </condition>
+    </progress>
+  </search>
+  <search base="baseSearch" id="baseSearch_commonB">
+    <query>| where match(modelName, "^$target_dm$$") AND is_common=1 | stats values(fieldName) as fields | eval fields=mvjoin(mvsort(fields), ", ")</query>
+    <progress>
+        <condition match="'job.resultCount' == 0">
+            <unset token="show_commonB"></unset>
+        </condition>
+        <condition>
+            <set token="show_commonB">True</set>
+        </condition>
+    </progress>
+  </search>
+  <search base="baseSearch" id="baseSearch_anomaly">
+    <query>| where is_common=2 AND is_anomaly=2| stats values(fieldName) as fields | eval fields=mvjoin(mvsort(fields), ", ")</query>
+    <progress>
+        <condition match="'job.resultCount' == 0">
+            <unset token="show_anomaly"></unset>
+        </condition>
+        <condition>
+            <set token="show_anomaly">True</set>
+        </condition>
+    </progress>
+  </search>  
+  <search base="baseSearch" id="baseSearch_anomaly_detector">
+    <query>| where is_common=1 OR is_anomaly=2</query>
+    <progress>
+        <condition match="'job.resultCount' == 0">
+            <unset token="show_anomaly_message"></unset>
+            <set token="hexa_css_code">#77DD77</set>
+        </condition>
+        <condition>
+            <set token="show_anomaly_message">True</set>
+            <set token="hexa_css_code">#FF6961</set>
+        </condition>
+    </progress>
+  </search>
+  <fieldset submitButton="false">
+    <input type="dropdown" token="app" searchWhenChanged="true">
+      <label>App:</label>
+      <choice value="*">ANY</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <fieldForLabel>eai:acl.app</fieldForLabel>
+      <fieldForValue>eai:acl.app</fieldForValue>
+      <search base="populate">
+        <query>stats c by eai:acl.app</query>
+      </search>
+    </input>
+    <input type="dropdown" token="source_dm" searchWhenChanged="true">
+      <label>A - Source DM to compare:</label>
+      <fieldForLabel>title</fieldForLabel>
+      <fieldForValue>title</fieldForValue>
+      <search base="populate">
+        <query>search eai:acl.app="$app$"
+| stats c by title
+| sort 0 title</query>
+      </search>
+      <change>
+        <condition>
+          <unset token="form.target_dm"></unset>
+          <unset token="target_dm"></unset>
+        </condition>
+      </change>
+    </input>
+    <input type="dropdown" token="target_dm" searchWhenChanged="true">
+      <label>B - Target DM to compare:</label>
+      <fieldForLabel>title</fieldForLabel>
+      <fieldForValue>title</fieldForValue>
+      <search base="populate">
+        <query>search eai:acl.app="$app$" title!="$source_dm$"
+| stats c by title
+| sort 0 title</query>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <search base="baseSearch">
+          <query>where is_common=2 | stats c as count</query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0xFF6961","0x77DD77"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="underLabel">FIELDS IN COMMON</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <search base="baseSearch">
+          <query>where is_common=1 | stats c as count</query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x77DD77","0xFF6961"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="underLabel">FIELDS UNCOMMON TO BOTH DATA MODELS</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <single>
+        <search base="baseSearch">
+          <query>where is_anomaly=2 | stats c as count</query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x77DD77", "0xFF6961"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="underLabel">FIELDS IN COMMON BUT NODE IS IN ANOMALY</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  
+  <row>
+    <panel depends="$source_dm$ $target_dm$ $show_anomaly_message$">
+      <html>
+        <div style="text-align: center; border: 3px dashed #ccc;">
+            <div style="display: inline-flex; align-items: center; margin-top: 5px;">
+                <span style="font-size: 22px; font-weight: bold; color: #FF6961; margin-top: 5px;">ANOMALY SUMMARY</span>
+            </div>
+            <div>
+              <h2>WARN - The following tables show the anomalies resulting from the data model comparaison and need to be addressed accordingly</h2>
+            </div>
+        </div>        
+      </html>
+    </panel>
+
+    <panel depends="$source_dm$ $target_dm$" rejects="$show_anomaly_message$">
+      <html>
+        <div style="text-align: center; border: 3px dashed #ccc;">
+            <div style="display: inline-flex; align-items: center; margin-top: 5px;">
+                <span style="font-size: 22px; font-weight: bold; color: #77DD77; margin-top: 5px;">ANOMALY SUMMARY</span>
+            </div>
+            <div>
+              <h2>INFO - No anomalies were detected during the Data model comparison, this is a go!</h2>
+            </div>
+        </div>        
+      </html>
+    </panel>
+
+    <panel rejects="$source_dm$ $target_dm$">
+      <html>
+        <div style="text-align: center; border: 3px dashed #ccc;">
+            <div style="display: inline-flex; align-items: center; margin-top: 5px;">
+                <span style="font-size: 22px; font-weight: bold; color: #6495ed; margin-top: 5px;">WAITING FOR YOU</span>
+            </div>
+            <div>
+              <h2>Waiting for input - Please select a Data model A source to compare with</h2>
+            </div>
+        </div>        
+      </html>
+    </panel>
+
+    <panel depends="$source_dm$" rejects="$target_dm$">
+      <html>
+        <div style="text-align: center; border: 3px dashed #ccc;">
+            <div style="display: inline-flex; align-items: center; margin-top: 5px;">
+                <span style="font-size: 22px; font-weight: bold; color: #6495ed; margin-top: 5px;">WAITING FOR YOU</span>
+            </div>
+            <div>
+              <h2>Waiting for input - Now select the Data model B target to compare with</h2>
+            </div>
+        </div>        
+      </html>
+    </panel>
+
+  </row>
+  
+  <row depends="$source_dm$ $target_dm$ $show_commonA$">
+    <panel>
+      <table>
+        <title>Fields in Data model $source_dm$ missing in Data Model $target_dm$</title>
+        <search base="baseSearch_commonA">
+          <query/>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  <row depends="$source_dm$ $target_dm$ $show_commonB$">
+    <panel>
+      <table>
+        <title>Fields in Data model $target_dm$ missing in Data Model $source_dm$</title>
+        <search base="baseSearch_commonB">
+          <query/>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  <row depends="$source_dm$ $target_dm$ $show_anomaly$">
+    <panel>
+      <table>
+        <title>Fields common to Data model $source_dm$ and Data Model $target_dm$ but in anomaly due to unequal nodes assignment</title>
+        <search base="baseSearch_anomaly">
+          <query/>
+        </search>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  
+  <row depends="$source_dm$ $target_dm$">
+    <panel>
+      <html>
+        <div style="text-align: center; border: 3px dashed #ccc;">
+            <div style="display: inline-flex; align-items: center; margin-top: 5px;">
+                <span style="font-size: 22px; font-weight: bold; color: $hexa_css_code$; margin-top: 5px;">DATA MODEL COMPARISON</span>
+            </div>
+            <div>
+              <h2>The following table shows the detailed results from the comparison, any row exposed in red needs to be addressed</h2>
+            </div>
+        </div>        
+      </html>
+    </panel>
+  </row>
+  
+  <row depends="$source_dm$ $target_dm$">
+    <panel>
+      <title>Data model detailed comparison</title>
+      <table>
+        <search base="baseSearch">
+          <query>fields modelName is_common fieldName fieldDisplayName nodeName is_anomaly type nodeNames_source nodeNames_target</query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="evalExpression">
+          <colorPalette type="map"></colorPalette>
+        </format>
+        <format type="color" field="is_common">
+          <colorPalette type="map">{"1":#FF6961,"2":#77DD77}</colorPalette>
+        </format>
+        <format type="color" field="is_anomaly">
+          <colorPalette type="map">{"1":#77DD77,"2":#FF6961}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>
