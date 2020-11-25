@@ -1,4 +1,4 @@
-<form>
+<form theme="light">
   <label>Splunk Data Models comparator</label>
   <description>This dashboard takes in input a data model source and a data model target to perform a comparison of the fields available in each model to detect and expose anomalies if any, to be used for Splunk SA CIM migration purposes</description>
   <search id="populate">
@@ -149,8 +149,8 @@
     </progress>
   </search>
   <fieldset submitButton="false">
-    <input type="dropdown" token="app" searchWhenChanged="true">
-      <label>App:</label>
+    <input type="dropdown" token="app_source" searchWhenChanged="true">
+      <label>App source:</label>
       <choice value="*">ANY</choice>
       <default>*</default>
       <initialValue>*</initialValue>
@@ -165,7 +165,7 @@
       <fieldForLabel>title</fieldForLabel>
       <fieldForValue>title</fieldForValue>
       <search base="populate">
-        <query>search eai:acl.app="$app$"
+        <query>search eai:acl.app="$app_source$"
 | stats c by title
 | sort 0 title</query>
       </search>
@@ -176,12 +176,23 @@
         </condition>
       </change>
     </input>
+    <input type="dropdown" token="app_target" searchWhenChanged="true">
+      <label>App target:</label>
+      <choice value="*">ANY</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <fieldForLabel>eai:acl.app</fieldForLabel>
+      <fieldForValue>eai:acl.app</fieldForValue>
+      <search base="populate">
+        <query>search title!="$source_dm$" | stats c by eai:acl.app</query>
+      </search>
+    </input>
     <input type="dropdown" token="target_dm" searchWhenChanged="true">
       <label>B - Target DM to compare:</label>
       <fieldForLabel>title</fieldForLabel>
       <fieldForValue>title</fieldForValue>
       <search base="populate">
-        <query>search eai:acl.app="$app$" title!="$source_dm$"
+        <query>search eai:acl.app="$app_target$" title!="$source_dm$"
 | stats c by title
 | sort 0 title</query>
       </search>
