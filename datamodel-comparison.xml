@@ -104,47 +104,47 @@
   <search base="baseSearch" id="baseSearch_commonA">
     <query>| where match(modelName, "^$source_dm$$") AND is_common=1 | stats values(fieldName) as fields | eval fields=mvjoin(mvsort(fields), ", ")</query>
     <progress>
-        <condition match="'job.resultCount' == 0">
-            <unset token="show_commonA"></unset>
-        </condition>
-        <condition>
-            <set token="show_commonA">True</set>
-        </condition>
+      <condition match="'job.resultCount' == 0">
+        <unset token="show_commonA"></unset>
+      </condition>
+      <condition>
+        <set token="show_commonA">True</set>
+      </condition>
     </progress>
   </search>
   <search base="baseSearch" id="baseSearch_commonB">
     <query>| where match(modelName, "^$target_dm$$") AND is_common=1 | stats values(fieldName) as fields | eval fields=mvjoin(mvsort(fields), ", ")</query>
     <progress>
-        <condition match="'job.resultCount' == 0">
-            <unset token="show_commonB"></unset>
-        </condition>
-        <condition>
-            <set token="show_commonB">True</set>
-        </condition>
+      <condition match="'job.resultCount' == 0">
+        <unset token="show_commonB"></unset>
+      </condition>
+      <condition>
+        <set token="show_commonB">True</set>
+      </condition>
     </progress>
   </search>
   <search base="baseSearch" id="baseSearch_anomaly">
     <query>| where is_common=2 AND is_anomaly=2| stats values(fieldName) as fields | eval fields=mvjoin(mvsort(fields), ", ")</query>
     <progress>
-        <condition match="'job.resultCount' == 0">
-            <unset token="show_anomaly"></unset>
-        </condition>
-        <condition>
-            <set token="show_anomaly">True</set>
-        </condition>
+      <condition match="'job.resultCount' == 0">
+        <unset token="show_anomaly"></unset>
+      </condition>
+      <condition>
+        <set token="show_anomaly">True</set>
+      </condition>
     </progress>
-  </search>  
+  </search>
   <search base="baseSearch" id="baseSearch_anomaly_detector">
     <query>| where is_common=1 OR is_anomaly=2</query>
     <progress>
-        <condition match="'job.resultCount' == 0">
-            <unset token="show_anomaly_message"></unset>
-            <set token="hexa_css_code">#77DD77</set>
-        </condition>
-        <condition>
-            <set token="show_anomaly_message">True</set>
-            <set token="hexa_css_code">#FF6961</set>
-        </condition>
+      <condition match="'job.resultCount' == 0">
+        <unset token="show_anomaly_message"></unset>
+        <set token="hexa_css_code">#77DD77</set>
+      </condition>
+      <condition>
+        <set token="show_anomaly_message">True</set>
+        <set token="hexa_css_code">#FF6961</set>
+      </condition>
     </progress>
   </search>
   <fieldset submitButton="false">
@@ -227,7 +227,6 @@
       </single>
     </panel>
   </row>
-  
   <row>
     <panel depends="$source_dm$ $target_dm$ $show_anomaly_message$">
       <html>
@@ -241,7 +240,6 @@
         </div>        
       </html>
     </panel>
-
     <panel depends="$source_dm$ $target_dm$" rejects="$show_anomaly_message$">
       <html>
         <div style="text-align: center; border: 3px dashed #ccc;">
@@ -254,7 +252,6 @@
         </div>        
       </html>
     </panel>
-
     <panel rejects="$source_dm$ $target_dm$">
       <html>
         <div style="text-align: center; border: 3px dashed #ccc;">
@@ -267,7 +264,6 @@
         </div>        
       </html>
     </panel>
-
     <panel depends="$source_dm$" rejects="$target_dm$">
       <html>
         <div style="text-align: center; border: 3px dashed #ccc;">
@@ -280,9 +276,7 @@
         </div>        
       </html>
     </panel>
-
   </row>
-  
   <row depends="$source_dm$ $target_dm$ $show_commonA$">
     <panel>
       <table>
@@ -293,7 +287,6 @@
       </table>
     </panel>
   </row>
-  
   <row depends="$source_dm$ $target_dm$ $show_commonB$">
     <panel>
       <table>
@@ -304,7 +297,6 @@
       </table>
     </panel>
   </row>
-  
   <row depends="$source_dm$ $target_dm$ $show_anomaly$">
     <panel>
       <table>
@@ -316,7 +308,6 @@
       </table>
     </panel>
   </row>
-  
   <row depends="$source_dm$ $target_dm$">
     <panel>
       <html>
@@ -331,13 +322,20 @@
       </html>
     </panel>
   </row>
-  
   <row depends="$source_dm$ $target_dm$">
     <panel>
       <title>Data model detailed comparison</title>
+      <input type="dropdown" token="show_fields" searchWhenChanged="true">
+        <label>Show fields:</label>
+        <choice value="is_common=* is_anomaly=*">ALL</choice>
+        <choice value="is_common=1 OR is_anomaly=2">Missing or anomaly</choice>
+        <choice value="is_common&gt;1 AND is_anomaly&gt;1">Compliant</choice>
+        <default>is_common=* is_anomaly=*</default>
+        <initialValue>is_common=* is_anomaly=*</initialValue>
+      </input>
       <table>
         <search base="baseSearch">
-          <query>fields modelName is_common fieldName fieldDisplayName nodeName is_anomaly type nodeNames_source nodeNames_target</query>
+          <query>search $show_fields$ | fields modelName is_common fieldName fieldDisplayName nodeName is_anomaly type nodeNames_source nodeNames_target</query>
         </search>
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
