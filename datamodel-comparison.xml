@@ -1,5 +1,6 @@
 <form>
   <label>Splunk Data Models comparator</label>
+  <description>This dashboard takes in input a data model source and a data model target to perform a comparison of the fields available in each model to detect and expose anomalies if any, to be used for Splunk SA CIM migration purposes</description>
   <search id="populate">
     <query>| rest /services/datamodel/model
 | stats c by eai:acl.app, title</query>
