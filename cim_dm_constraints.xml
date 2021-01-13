@@ -1,0 +1,120 @@
+<dashboard theme="dark">
+  <label>Splunk SA CIM - Data models macro constraints reporting</label>
+  <row>
+    <panel>
+      <title>CIM accelerated Data models</title>
+      <table>
+        <title>drilldown: click on a row to run the constraint + tag reporting</title>
+        <search>
+          <query>| rest /servicesNS/-/-/admin/macros count=0 splunk_server=local | rename eai:appName as app | where app="Splunk_SA_CIM" AND match(title, "^cim_.*indexes$$") | table title definition
+
+| eval isDefault=if(match(definition, "^\(\)$"),"⭕" ,"✔️")
+
+| eval datamodel=case(
+title="cim_Alerts_indexes", "Alerts",
+title="cim_Application_State_indexes", "Application_State",
+title="cim_Authentication_indexes", "Authentication",
+title="cim_Certificates_indexes", "Certificates",
+title="cim_Change_Analysis_indexes", "Change_Analysis",
+title="cim_Change_indexes", "Change",
+title="cim_Compute_Inventory_indexes", "Compute_Inventory",
+title="cim_Databases_indexes", "Databases",
+title="cim_DLP_indexes", "DLP",
+title="cim_Email_indexes", "Email",
+title="cim_Endpoint_indexes", "Endpoint",
+title="cim_Event_Signatures_indexes", "Event_Signatures",
+title="cim_Interprocess_Messaging_indexes", "Interprocess_Messaging",
+title="cim_Intrusion_Detection_indexes", "Intrusion_Detection",
+title="cim_JVM_indexes", "JVM",
+title="cim_Malware_indexes", "Malware",
+title="cim_Network_Resolution_indexes", "Network_Resolution",
+title="cim_Network_Sessions_indexes", "Network_Sessions",
+title="cim_Network_Traffic_indexes", "Network_Traffic",
+title="cim_Performance_indexes", "Performance",
+title="cim_Ticket_Management_indexes", "Ticket_Management",
+title="cim_Updates_indexes", "Updates",
+title="cim_Vulnerabilities_indexes", "Vulnerabilities",
+title="cim_Web_indexes", "Web"
+)
+
+| `get_dm_tag_constraint("Alerts")`
+| `get_dm_tag_constraint("Application_State")`
+| `get_dm_tag_constraint("Authentication")`
+| `get_dm_tag_constraint("Certificates")`
+| `get_dm_tag_constraint("Change_Analysis")`
+| `get_dm_tag_constraint("Change")`
+| `get_dm_tag_constraint("Compute_Inventory")`
+| `get_dm_tag_constraint("Databases")`
+| `get_dm_tag_constraint("DLP")`
+| `get_dm_tag_constraint("Email")`
+| `get_dm_tag_constraint("Endpoint")`
+| `get_dm_tag_constraint("Event_Signatures")`
+| `get_dm_tag_constraint("Interprocess_Messaging")`
+| `get_dm_tag_constraint("Intrusion_Detection")`
+| `get_dm_tag_constraint("JVM")`
+| `get_dm_tag_constraint("Malware")`
+| `get_dm_tag_constraint("Network_Resolution")`
+| `get_dm_tag_constraint("Network_Sessions")`
+| `get_dm_tag_constraint("Network_Traffic")`
+| `get_dm_tag_constraint("Performance")`
+| `get_dm_tag_constraint("Ticket_Management")`
+| `get_dm_tag_constraint("Updates")`
+| `get_dm_tag_constraint("Vulnerabilities")`
+| `get_dm_tag_constraint("Web")`
+
+| fields datamodel, title definition, *
+
+| join type=outer datamodel [ 
+
+| rest /services/admin/summarization by_tstats=t splunk_server=local count=0 
+| eval key=replace(title,(("tstats:DM_" . 'eai:acl.app') . "_"),""), datamodel=replace('summary.id',(("DM_" . 'eai:acl.app') . "_"),"") 
+| join type=left key 
+    [| rest /services/data/models splunk_server=local count=0 
+    | table title, "acceleration.cron_schedule", "eai:digest" 
+    | rename title as key 
+    | rename "acceleration.cron_schedule" as cron] 
+| table datamodel, "eai:acl.app", "summary.access_time", "summary.is_inprogress", "summary.size", "summary.latest_time", "summary.complete", "summary.buckets_size", "summary.buckets", cron, "summary.last_error", "summary.time_range", "summary.id", "summary.mod_time", "eai:digest", "summary.earliest_time", "summary.last_sid", "summary.access_count" 
+| rename "summary.id" as summary_id, "summary.time_range" as retention, "summary.earliest_time" as earliest, "summary.latest_time" as latest, "eai:digest" as digest 
+| rename "summary.*" as "*", "eai:acl.*" as "*" 
+| sort datamodel 
+| rename access_count as "Datamodel_Acceleration.access_count", access_time as "Datamodel_Acceleration.access_time", app as "Datamodel_Acceleration.app", buckets as "Datamodel_Acceleration.buckets", buckets_size as "Datamodel_Acceleration.buckets_size", cron as "Datamodel_Acceleration.cron", complete as "Datamodel_Acceleration.complete", datamodel as "Datamodel_Acceleration.datamodel", digest as "Datamodel_Acceleration.digest", earliest as "Datamodel_Acceleration.earliest", is_inprogress as "Datamodel_Acceleration.is_inprogress", last_error as "Datamodel_Acceleration.last_error", last_sid as "Datamodel_Acceleration.last_sid", latest as "Datamodel_Acceleration.latest", mod_time as "Datamodel_Acceleration.mod_time", retention as "Datamodel_Acceleration.retention", size as "Datamodel_Acceleration.size", summary_id as "Datamodel_Acceleration.summary_id" 
+| fields + "Datamodel_Acceleration.access_count", "Datamodel_Acceleration.access_time", "Datamodel_Acceleration.app", "Datamodel_Acceleration.buckets", "Datamodel_Acceleration.buckets_size", "Datamodel_Acceleration.cron", "Datamodel_Acceleration.complete", "Datamodel_Acceleration.datamodel", "Datamodel_Acceleration.digest", "Datamodel_Acceleration.earliest", "Datamodel_Acceleration.is_inprogress", "Datamodel_Acceleration.last_error", "Datamodel_Acceleration.last_sid", "Datamodel_Acceleration.latest", "Datamodel_Acceleration.mod_time", "Datamodel_Acceleration.retention", "Datamodel_Acceleration.size", "Datamodel_Acceleration.summary_id" 
+| rename "Datamodel_Acceleration.*" as "*" 
+| join type=outer last_sid 
+    [| rest splunk_server=local count=0 /services/search/jobs reportSearch=summarize* 
+    | rename sid as last_sid 
+    | fields + last_sid, runDuration] 
+| eval "size(MB)"=round((size / 1048576),1), "retention(days)"=if((retention == 0),"unlimited",round((retention / 86400),1)), "complete(%)"=round((complete * 100),1), "runDuration(s)"=round(runDuration,1) 
+| sort 100 + datamodel 
+| table datamodel, app, cron, "retention(days)", earliest, latest, is_inprogress, "complete(%)", "size(MB)", "runDuration(s)", last_error, *
+| where app="Splunk_SA_CIM"
+| rex field="datamodel" "^(?&lt;datamodel&gt;[^\.]*)"
+
+| eval "size(GB)"=round('size(MB)'/1024, 2) 
+| fields datamodel, "size(GB)", "complete(%)"
+
+]
+
+| stats first(*) as "*" by datamodel
+| fields datamodel, title definition, *
+| eval "complete_status"=if('complete(%)'&lt;100,"⭕" ,"✔️")
+| where isnum('size(GB)')</query>
+          <earliest>-15m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <drilldown>
+          <link target="_blank">/app/detect_aa_siem_management/search?q=search%20$row.definition$%20$row.tag_constraint$%7C%20stats%20count%2C%20values%28eventtype%29%20as%20eventtype%2C%20values%28tag%29%20as%20tag%20by%20index%2C%20sourcetype%20%7C%20eventstats%20sum%28count%29%20as%20total_count%20by%20index%20%7C%20eval%20percent%3Dround%28count%2Ftotal_count%2A100%2C%202%29%20.%20%22%25%22%2C%20sourcetype_summary%3Dsourcetype%20.%20%22%20%7C%20%22%20.%20percent%20.%20%22%20%28count%3A%20%22%20.%20count%20.%20%22%29%22%20%7C%20stats%20values%28sourcetype_summary%29%20as%20sourcetype%2C%20values%28eventtype%29%20as%20eventtype%2C%20values%28tag%29%20as%20tag%20by%20index</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</dashboard>
