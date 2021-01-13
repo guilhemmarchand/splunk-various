@@ -1,0 +1,232 @@
+<form theme="dark">
+  <label>GSOC - Datamodel acceleration overview</label>
+  <fieldset submitButton="false">
+    <input type="time" token="time">
+      <label></label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="datamodel" searchWhenChanged="true">
+      <label>DM:</label>
+      <fieldForLabel>datamodel</fieldForLabel>
+      <fieldForValue>datamodel</fieldForValue>
+      <search>
+        <query>| `datamodel("Splunk_Audit", "Datamodel_Acceleration")`
+| stats count by Datamodel_Acceleration.datamodel
+| rename Datamodel_Acceleration.datamodel as datamodel</query>
+        <earliest>-60m@m</earliest>
+        <latest>now</latest>
+      </search>
+      <change>
+        <condition value="Endpoint.Filesystem">
+          <set token="datamodel_tk">Endpoint</set>
+        </condition>
+        <condition>
+          <set token="datamodel_tk">$datamodel$</set>
+        </condition>
+      </change>
+    </input>
+  </fieldset>
+  <row rejects="$datamodel$">
+    <panel>
+      <html>
+        <div style="text-align: center;">
+          <h2>Please choose a datamodel in the dropdown above to start.</h2>
+        </div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <search depends="$datamodel$ $datamodel_tk$">
+          <query>index=_internal host="*" source=*scheduler.log status="*" AND status!="continued" savedsearch_name="*_ACCELERATE_*" app="Splunk_SA_CIM"
+| rex field=savedsearch_name "_ACCELERATE_DM_Splunk_SA_CIM_(?&lt;datamodel&gt;.*)_ACCELERATE_"
+| where datamodel="$datamodel_tk$" 
+| stats avg(run_time) AS avg_run_time, max(run_time) AS max_run_time, latest(run_time) AS latest_run_time, max(_time) AS "last_run (dd/mm/YYYY H:M:S)" by app,savedsearch_name,datamodel
+| eval "last_run (dd/mm/YYYY H:M:S)"=strftime('last_run (dd/mm/YYYY H:M:S)', "%d/%m/%Y %H:%M:%S")
+| foreach *_run_time [ eval &lt;&lt;FIELD&gt;&gt;=round('&lt;&lt;FIELD&gt;&gt;', 2) ]
+| sort - avg_run_time
+| eval duration_avg=tostring(avg_run_time, "duration"), duration_max=tostring(max_run_time, "duration"), duration_latest=tostring(latest_run_time, "duration")
+| eval "Avg run time (seconds / duration)" = avg_run_time + " sec / " + duration_avg + " (HH:MM:SSS)"
+| eval "Max run time (seconds / duration)" = max_run_time + " sec / " + duration_avg + " (HH:MM:SSS)"
+| eval "Latest run time (seconds / duration)" = latest_run_time + " sec / " + duration_avg + " (HH:MM:SSS)"
+| fields app,datamodel,report*,Avg*,Max*,Latest*,"last_run (dd/mm/YYYY H:M:S)"
+| join type=outer datamodel [ | rest /services/configs/conf-datamodels | stats values(acceleration.earliest_time) as retention_period, values(acceleration.max_time) as max_time, values(acceleration.backfill_time) as backfill_time, values(acceleration.max_concurrent) as max_concurrent by title | rename title as datamodel | rex field=datamodel "(?&lt;datamodel&gt;[^\.]*)" ]</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <search depends="$datamodel$ $datamodel_tk$">
+          <query>| rest /servicesNS/-/-/admin/macros count=0 splunk_server=local | rename eai:appName as app | where app="Splunk_SA_CIM" AND match(title, "^cim_.*indexes$$") | table title definition
+
+| eval isDefault=if(match(definition, "^\(\)$"),"⭕" ,"✔️")
+
+| eval datamodel=case(
+title="cim_Alerts_indexes", "Alerts",
+title="cim_Application_State_indexes", "Application_State",
+title="cim_Authentication_indexes", "Authentication",
+title="cim_Certificates_indexes", "Certificates",
+title="cim_Change_Analysis_indexes", "Change_Analysis",
+title="cim_Change_indexes", "Change",
+title="cim_Compute_Inventory_indexes", "Compute_Inventory",
+title="cim_Databases_indexes", "Databases",
+title="cim_DLP_indexes", "DLP",
+title="cim_Email_indexes", "Email",
+title="cim_Endpoint_indexes", "Endpoint",
+title="cim_Event_Signatures_indexes", "Event_Signatures",
+title="cim_Interprocess_Messaging_indexes", "Interprocess_Messaging",
+title="cim_Intrusion_Detection_indexes", "Intrusion_Detection",
+title="cim_JVM_indexes", "JVM",
+title="cim_Malware_indexes", "Malware",
+title="cim_Network_Resolution_indexes", "Network_Resolution",
+title="cim_Network_Sessions_indexes", "Network_Sessions",
+title="cim_Network_Traffic_indexes", "Network_Traffic",
+title="cim_Performance_indexes", "Performance",
+title="cim_Ticket_Management_indexes", "Ticket_Management",
+title="cim_Updates_indexes", "Updates",
+title="cim_Vulnerabilities_indexes", "Vulnerabilities",
+title="cim_Web_indexes", "Web"
+)
+
+| where datamodel="$datamodel_tk$"
+| `get_dm_tag_constraint("$datamodel_tk$")`
+
+| fields datamodel, title definition, *
+
+| join type=outer datamodel [ 
+
+| rest /services/admin/summarization by_tstats=t splunk_server=local count=0 
+| eval key=replace(title,(("tstats:DM_" . 'eai:acl.app') . "_"),""), datamodel=replace('summary.id',(("DM_" . 'eai:acl.app') . "_"),"") 
+| join type=left key 
+    [| rest /services/data/models splunk_server=local count=0 
+    | table title, "acceleration.cron_schedule", "eai:digest" 
+    | rename title as key 
+    | rename "acceleration.cron_schedule" as cron] 
+| table datamodel, "eai:acl.app", "summary.access_time", "summary.is_inprogress", "summary.size", "summary.latest_time", "summary.complete", "summary.buckets_size", "summary.buckets", cron, "summary.last_error", "summary.time_range", "summary.id", "summary.mod_time", "eai:digest", "summary.earliest_time", "summary.last_sid", "summary.access_count" 
+| rename "summary.id" as summary_id, "summary.time_range" as retention, "summary.earliest_time" as earliest, "summary.latest_time" as latest, "eai:digest" as digest 
+| rename "summary.*" as "*", "eai:acl.*" as "*" 
+| sort datamodel 
+| rename access_count as "Datamodel_Acceleration.access_count", access_time as "Datamodel_Acceleration.access_time", app as "Datamodel_Acceleration.app", buckets as "Datamodel_Acceleration.buckets", buckets_size as "Datamodel_Acceleration.buckets_size", cron as "Datamodel_Acceleration.cron", complete as "Datamodel_Acceleration.complete", datamodel as "Datamodel_Acceleration.datamodel", digest as "Datamodel_Acceleration.digest", earliest as "Datamodel_Acceleration.earliest", is_inprogress as "Datamodel_Acceleration.is_inprogress", last_error as "Datamodel_Acceleration.last_error", last_sid as "Datamodel_Acceleration.last_sid", latest as "Datamodel_Acceleration.latest", mod_time as "Datamodel_Acceleration.mod_time", retention as "Datamodel_Acceleration.retention", size as "Datamodel_Acceleration.size", summary_id as "Datamodel_Acceleration.summary_id" 
+| fields + "Datamodel_Acceleration.access_count", "Datamodel_Acceleration.access_time", "Datamodel_Acceleration.app", "Datamodel_Acceleration.buckets", "Datamodel_Acceleration.buckets_size", "Datamodel_Acceleration.cron", "Datamodel_Acceleration.complete", "Datamodel_Acceleration.datamodel", "Datamodel_Acceleration.digest", "Datamodel_Acceleration.earliest", "Datamodel_Acceleration.is_inprogress", "Datamodel_Acceleration.last_error", "Datamodel_Acceleration.last_sid", "Datamodel_Acceleration.latest", "Datamodel_Acceleration.mod_time", "Datamodel_Acceleration.retention", "Datamodel_Acceleration.size", "Datamodel_Acceleration.summary_id" 
+| rename "Datamodel_Acceleration.*" as "*" 
+| join type=outer last_sid 
+    [| rest splunk_server=local count=0 /services/search/jobs reportSearch=summarize* 
+    | rename sid as last_sid 
+    | fields + last_sid, runDuration] 
+| eval "size(MB)"=round((size / 1048576),1), "retention(days)"=if((retention == 0),"unlimited",round((retention / 86400),1)), "complete(%)"=round((complete * 100),1), "runDuration(s)"=round(runDuration,1) 
+| sort 100 + datamodel 
+| table datamodel, app, cron, "retention(days)", earliest, latest, is_inprogress, "complete(%)", "size(MB)", "runDuration(s)", last_error, *
+| where app="Splunk_SA_CIM"
+| rex field="datamodel" "^(?&lt;datamodel&gt;[^\.]*)"
+
+| eval "size(GB)"=round('size(MB)'/1024, 2) 
+| fields datamodel, "size(GB)", "complete(%)"
+
+]
+
+| stats first(*) as "*" by datamodel
+| fields datamodel, title definition, *
+| eval "complete_status"=if('complete(%)'&lt;100,"⭕" ,"✔️")
+| where isnum('size(GB)')</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="text" token="span_tk" searchWhenChanged="true">
+        <label>span:</label>
+        <default>5m</default>
+        <prefix>span="</prefix>
+        <suffix>"</suffix>
+        <initialValue>5m</initialValue>
+      </input>
+      <chart>
+        <search depends="$datamodel$ $datamodel_tk$">
+          <query>index=_introspection host=* sourcetype=splunk_resource_usage component=PerProcess data.search_props.sid::* "data.search_props.acceleration_id"="*_DM_Splunk_SA_CIM_$datamodel_tk$*"
+| eval key = 'data.search_props.acceleration_id' . ":" . 'data.pid'
+| timechart limit=45 useother=f $span_tk$ avg(data.elapsed) as "data.elapsed" by key
+| appendcols [ search index=_introspection host=* sourcetype=splunk_resource_usage component=PerProcess data.search_props.sid::* "data.search_props.acceleration_id"="*_DM_Splunk_SA_CIM_$datamodel_tk$*"
+| eval key = 'data.search_props.acceleration_id' . ":" . 'data.pid'
+| timechart $span_tk$ dc(key) as concurrent_searches ]</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY2.majorUnit">1</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">run time (seconds)</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">1</option>
+        <option name="charting.axisY2.minimumNumber">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">concurrent_searches</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="height">400</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <search depends="$datamodel$ $datamodel_tk$">
+          <query>index=_internal source=*scheduler.log _ACCELERATE_DM_*$datamodel_tk$*_ACCELERATE_
+| eval scheduled=strftime(scheduled_time,"%c")
+| stats values(scheduled) as scheduled, values(scheduled_time) as scheduled_time, list(status) as status, values(run_time) as run_time by savedsearch_name sid
+| sort - scheduled_time
+| eval state=if(isnull(run_time),"running","done")
+| eval duration=tostring(if(isnull(run_time),now()-scheduled_time,run_time),"duration") | fields - scheduled_time savedsearch_name sid
+| rename run_time as "run_time (sec)"
+| fields scheduled, status, state, duration, "run_time (sec)"
+| head 10000</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>
