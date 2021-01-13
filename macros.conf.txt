@@ -1,0 +1,29 @@
+
+[get_dm_tag_constraint(1)]
+definition = join type=outer [ | datamodel $datamodel$\
+\
+`comment("---- Get the _raw ----")`\
+| table _raw\
+| fields _raw\
+\
+| rex field=_raw "\"constraints\":\[\{\"search\":\"(?<macro>[^\s]+)\s*(?<tags_constraint>[^\"]+)\s*"\
+\
+| rex field=_raw "\"constraints\":\[\],\"lineage\":\"Ports\",\"baseSearch\":\"(?<macro>[^\s]+)\s*(?<tags_endpoint_port>[^\|]+)\s*"\
+| rex field=_raw "\"constraints\":\[\],\"lineage\":\"Processes\",\"baseSearch\":\"(?<macro>[^\s]+)\s*(?<tags_endpoint_processes>[^\|]+)\s*"\
+| rex field=_raw "\"constraints\":\[\],\"lineage\":\"Services\",\"baseSearch\":\"(?<macro>[^\s]+)\s*(?<tags_endpoint_services>[^\"]+)\s*"\
+| rex field=_raw "\"constraints\":\[\],\"lineage\":\"Filesystem\",\"baseSearch\":\"(?<macro>[^\s]+)\s*(?<tags_endpoint_filesystem>[^\"]+)\s*"\
+| rex field=_raw "\"constraints\":\[\],\"lineage\":\"Registry\",\"baseSearch\":\"(?<macro>[^\s]+)\s*(?<tags_endpoint_registry>[^\"]+)\s*"\
+\
+| eval extract_constraint=if(isnotnull(tags_endpoint_port), "( " .  tags_endpoint_port . " ) OR ( " . tags_endpoint_processes . " ) OR ( " . tags_endpoint_services . " ) OR ( " . tags_endpoint_filesystem . " ) OR ( " . tags_endpoint_registry . " )", tags_constraint)\
+\
+| append [ | makeresults | eval tags_constraint="get tag constraints has failed!" ]\
+\
+| head 1\
+\
+| eval datamodel="$datamodel$"\
+\
+| fields datamodel, extract_constraint | fields - _raw ]\
+| eval tag_constraint=if(isnotnull(extract_constraint), extract_constraint, tag_constraint)\
+| fields - extract_constraint
+args = datamodel
+iseval = false
