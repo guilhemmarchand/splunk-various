@@ -1,4 +1,4 @@
-<form theme="light">
+<form theme="dark">
   <label>Splunk Data Models comparator</label>
   <description>This dashboard takes in input a data model source and a data model target to perform a comparison of the fields available in each model to detect and expose anomalies if any, to be used for Splunk SA CIM migration purposes</description>
   <search id="populate">
@@ -6,13 +6,22 @@
 | stats c by eai:acl.app, title</query>
   </search>
   <search id="baseSearch">
-    <query>| datamodel $source_dm$
+    <query>| datamodel "$source_dm$"
 
 `comment("---- Get the _raw ----")`
 | table _raw
 | fields _raw
 
 `comment("---- Get spath to extract json objects ----")`
+| spath objects{}.calculations{}.owner output=
+| spath objects{}.calculations{}.outputFields{}.fieldName output=objects{}.calculations{}.outputFields{}.fieldName
+| spath objects{}.calculations{}.outputFields{}.displayName output=objects{}.calculations{}.outputFields{}.displayName
+| spath objects{}.calculations{}.outputFields{}.type output=objects{}.calculations{}.outputFields{}.type
+| spath objects{}.calculations{}.expression output=objects{}.calculations{}.expression
+| spath objects{}.fields{}.owner output=objects{}.fields{}.owner
+| spath objects{}.fields{}.fieldName output=objects{}.fields{}.fieldName
+| spath objects{}.fields{}.displayName output=objects{}.fields{}.displayName
+| spath objects{}.fields{}.type output=objects{}.fields{}.type
 | spath
 
 `comment("---- Compute calculated fields ----")`
@@ -51,13 +60,22 @@
 
 | sort 0 nodeName fieldName
 
-| append [ | datamodel $target_dm$
+| append [ | datamodel "$target_dm$"
 
 `comment("---- Get the _raw ----")`
 | table _raw
 | fields _raw
 
 `comment("---- Get spath to extract json objects ----")`
+| spath objects{}.calculations{}.owner output=
+| spath objects{}.calculations{}.outputFields{}.fieldName output=objects{}.calculations{}.outputFields{}.fieldName
+| spath objects{}.calculations{}.outputFields{}.displayName output=objects{}.calculations{}.outputFields{}.displayName
+| spath objects{}.calculations{}.outputFields{}.type output=objects{}.calculations{}.outputFields{}.type
+| spath objects{}.calculations{}.expression output=objects{}.calculations{}.expression
+| spath objects{}.fields{}.owner output=objects{}.fields{}.owner
+| spath objects{}.fields{}.fieldName output=objects{}.fields{}.fieldName
+| spath objects{}.fields{}.displayName output=objects{}.fields{}.displayName
+| spath objects{}.fields{}.type output=objects{}.fields{}.type
 | spath
 
 `comment("---- Compute calculated fields ----")`
