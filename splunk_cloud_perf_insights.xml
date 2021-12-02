@@ -1,0 +1,709 @@
+<form version="1.1" theme="dark">
+  <label>Splunk Cloud Performance insights</label>
+  <description>This dashboard exposes the main KPIs useful to understand the state and the level of resources usage in the nhsdigital Splunk Cloud stack</description>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="time" searchWhenChanged="true">
+      <label>time:</label>
+      <default>
+        <earliest>-60m</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>Average CPU search heads</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide host=sh*.splunkcloud.com
+| eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
+| bucket _time span=1m
+| stats avg(cpu_total_pct) as avg by _time, host
+| stats avg(avg) as avg by _time
+| stats perc95(avg) as perc95</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">radialGauge</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="height">250</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>perc95 CPU indexers</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide host=idx*.splunkcloud.com
+| eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
+| bucket _time span=1m
+| stats avg(cpu_total_pct) as avg by _time, host
+| stats avg(avg) as avg by _time
+| stats perc95(avg) as perc95</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">radialGauge</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="height">250</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Search heads CPUs usage</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide host=sh*.splunkcloud.com
+| eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
+| eval search_head_type=case(
+match(host, "(sh-i-xxxx|sh-i-xxxx)"), "Adhoc",
+match(host, "sh-i-xxxxx"), "ITSI",
+match(host, "sh-i-xxxxx"), "ES",
+match(host, ".*"), "Unknown")
+| eval key = search_head_type . ":" . host
+| timechart span="5m" limit=40 avg(cpu_total_pct) as cpu_total_pct by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.maximumNumber">101</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Indexers CPUs usage</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide host=idx*.splunkcloud.com
+| eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
+| timechart useother=f limit=40 span="5m" avg(cpu_total_pct) as cpu_total_pct by host</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.maximumNumber">101</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>CPU units used by type of search</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host=idx*.splunkcloud.com
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
+| timechart span="5m" limit=40 sum(pct_cpu) as pct_pu by data.search_props.type
+</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>CPU units used by search head</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host=idx*.splunkcloud.com
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
+| timechart span="5m" limit=40 sum(pct_cpu) as pct_pu by data.search_props.search_head</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>CPU units used by type of search head (Adhoc vs ES vs ITSI)</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host=idx*.splunkcloud.com
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
+| rename data.search_props.search_head as search_head
+| eval search_head_type=case(
+match(search_head, "(sh-i-xxxx|sh-i-xxxx)"), "Adhoc",
+match(search_head, "sh-i-xxxxx"), "ITSI",
+match(search_head, "sh-i-xxxx"), "ES",
+match(search_head, ".*"), "Unknown")
+| timechart span="5m" limit=45 sum(pct_cpu) as pct_pu by search_head_type</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>CPU units used by type of search head / type of search</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host=idx*.splunkcloud.com
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
+| rename data.search_props.search_head as search_head, data.search_props.type as type
+| eval search_head_type=case(
+match(search_head, "(sh-i-xxxx|sh-i-xxxx)"), "Adhoc",
+match(search_head, "sh-i-xxxx"), "ITSI",
+match(search_head, "sh-i-xxxx"), "ES",
+match(search_head, ".*"), "Unknown")
+| eval key = search_head_type . ":" . type
+| timechart span="5m" limit=40 sum(pct_cpu) as pct_pu by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Ingestion volume (MB)</title>
+        <search>
+          <query>index=_internal source=*license_usage.log* type=Usage host=*.splunkcloud.com | eval MB=round((b/1024/1024),2) | where MB&gt;0 | bucket _time span=1m | stats sum(MB) AS MB by _time,idx
+| timechart limit=45 span=30m sum(MB) AS volume_MB by idx | addtotals fieldname=Total_MB | where isnotnull(Total_MB)</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.overlayFields">Total_MB</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Investion by event count</title>
+        <search>
+          <query>| tstats count where index=* by _time, index span=30m
+| timechart limit=45 span=30m sum(count) AS count by index | addtotals fieldname=total | where isnotnull(total)</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">total</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="height">350</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>IDX - Blocking queues (more than 0% means queues filling)</title>
+      <input type="dropdown" token="queues_tk" searchWhenChanged="true">
+        <label>Queues calculation:</label>
+        <choice value="avg">Avg</choice>
+        <choice value="Max">Max</choice>
+        <default>Max</default>
+        <initialValue>Max</initialValue>
+      </input>
+      <chart>
+        <search>
+          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue
+| eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
+| eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
+| eval fill_perc=round((curr/max)*100,2)
+| bucket _time span=1m
+| stats Median(fill_perc) AS "fill_percentage" by host, _time, name
+| timechart limit=0 useother=f minspan=5m bins=1000 perc95(fill_percentage) as "pct_fill_indexqueue" by name</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="height">300</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Pct queues</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisY2.enabled">false</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="refresh.display">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>indexqueue</title>
+      <chart>
+        <search>
+          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=indexqueue
+| eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
+| eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
+| eval fill_perc=round((curr/max)*100,2)
+| bucket _time span=1m
+| eval key = host . ":" . name . ":" . ingest_pipe
+| stats Median(fill_perc) AS "fill_percentage" by key, _time
+| timechart limit=0 useother=f minspan=5m bins=1000 perc95(fill_percentage) as "pct_fill_indexqueue" by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Pct queues</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">300</option>
+        <option name="refresh.display">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>parsingqueue</title>
+      <chart>
+        <search>
+          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=parsingqueue
+| eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
+| eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
+| eval fill_perc=round((curr/max)*100,2)
+| bucket _time span=1m
+| eval key = host . ":" . name . ":" . ingest_pipe
+| stats Median(fill_perc) AS "fill_percentage" by key, _time
+| timechart limit=0 useother=f minspan=5m bins=1000 perc95(fill_percentage) as "pct_fill_indexqueue" by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Pct queues</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">300</option>
+        <option name="refresh.display">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>aggqueue</title>
+      <chart>
+        <search>
+          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=aggqueue
+| eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
+| eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
+| eval fill_perc=round((curr/max)*100,2)
+| bucket _time span=1m
+| eval key = host . ":" . name . ":" . ingest_pipe
+| stats Median(fill_perc) AS "fill_percentage" by key, _time
+| timechart limit=0 useother=f minspan=5m bins=1000 perc95(fill_percentage) as "pct_fill_indexqueue" by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Pct queues</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">300</option>
+        <option name="refresh.display">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>httpinputq</title>
+      <chart>
+        <search>
+          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=httpinputq
+| eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
+| eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
+| eval fill_perc=round((curr/max)*100,2)
+| bucket _time span=1m
+| eval key = host . ":" . name . ":" . ingest_pipe
+| stats Median(fill_perc) AS "fill_percentage" by key, _time
+| timechart limit=0 useother=f minspan=5m bins=1000 perc95(fill_percentage) as "pct_fill_indexqueue" by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Pct queues</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">300</option>
+        <option name="refresh.display">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>typingqueue</title>
+      <chart>
+        <search>
+          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=typingqueue
+| eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
+| eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
+| eval fill_perc=round((curr/max)*100,2)
+| bucket _time span=1m
+| eval key = host . ":" . name . ":" . ingest_pipe
+| stats Median(fill_perc) AS "fill_percentage" by key, _time
+| timechart limit=0 useother=f minspan=5m bins=1000 perc95(fill_percentage) as "pct_fill_indexqueue" by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Pct queues</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="height">300</option>
+        <option name="refresh.display">none</option>
+      </chart>
+    </panel>
+    <panel></panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>top search concurrency by user (stacked)</title>
+        <search>
+          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) host=sh*.splunkcloud.com
+| eval search_id=if(isnull(search_id),id,search_id) 
+| replace '*' with * in search_id 
+| search search_id!=rt_* 
+| timechart limit=45 useother=f dc(search_id) as dcount by user</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>top search concurrency for all</title>
+        <search>
+          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) host=sh*.splunkcloud.com
+| eval search_id=if(isnull(search_id),id,search_id) 
+| replace '*' with * in search_id 
+| search search_id!=rt_* 
+| timechart dc(search_id) as dcount</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>top search concurrency by type of search head</title>
+        <search>
+          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) host=sh*.splunkcloud.com
+| eval search_id=if(isnull(search_id),id,search_id) 
+| replace '*' with * in search_id 
+| search search_id!=rt_*
+| eval search_head_type=case(
+match(host, "(sh-xxxxx)"), "Adhoc",
+match(host, "sh-xxxxx"), "ITSI",
+match(host, "sh-xxxxx"), "ES",
+match(host, ".*"), "Unknown")
+| eval key = search_head_type . ":" . host
+| timechart limit=45 useother=f dc(search_id) as dcount by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="height">350</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>roles and users</title>
+        <search>
+          <query>| rest /services/authentication/users splunk_server=local
+| fields title roles realname email | rename title as userName | rename realname as Name
+| search userName!="admin" userName="*" roles="*" userName="*" userName="*" | fields userName roles Name email
+| lookup roles_quota.csv title as roles
+| stats max(srchJobsQuota) as srchJobsQuota values(roles) as roles by userName Name email</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Top users by total search run time</title>
+        <search>
+          <query>index=_audit action=search (id=* OR search_id=*) host=sh*.splunkcloud.com
+| eval search_id = if(isnull(search_id), id, search_id)
+| replace '*' with * in search_id | rex "search='(?&lt;search&gt;.*?)', autojoin" | convert num(total_run_time) | eval user = if(user="n/a", null(), user)
+| stats min(_time) as _time first(user) as user max(total_run_time) as total_run_time first(search) as search first(apiStartTime) as "Earliest time" first(apiEndTime) as "Latest time" by search_id
+| search search_id=* search=search* OR search=rtsearch* search!=*_internal* search!=*_audit* | sort - total_run_time | fields - search_id
+
+| stats sum(total_run_time) as total_run_time by user
+
+| sort - total_run_time 
+| head 100</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top users by avg run time</title>
+        <search>
+          <query>index=_audit action=search (id=* OR search_id=*) host=sh*.splunkcloud.com
+| eval search_id = if(isnull(search_id), id, search_id)
+| replace '*' with * in search_id | rex "search='(?&lt;search&gt;.*?)', autojoin" | convert num(total_run_time) | eval user = if(user="n/a", null(), user)
+| stats min(_time) as _time first(user) as user max(total_run_time) as total_run_time first(search) as search first(apiStartTime) as "Earliest time" first(apiEndTime) as "Latest time" by search_id
+| search search_id=* search=search* OR search=rtsearch* search!=*_internal* search!=*_audit* | sort - total_run_time
+| stats avg(total_run_time) as avg by user
+| sort - limit=100 avg</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Run time expensive searches</title>
+        <search>
+          <query>index=_audit action=search (id=* OR search_id=*) host=sh*.splunkcloud.com
+| eval search_id = if(isnull(search_id), id, search_id)
+| replace '*' with * in search_id | rex "search='(?&lt;search&gt;.*?)', autojoin" | convert num(total_run_time) | eval user = if(user="n/a", null(), user)
+| stats min(_time) as _time first(user) as user max(total_run_time) as total_run_time first(search) as search first(apiStartTime) as "Earliest time" first(apiEndTime) as "Latest time" by search_id
+| search search_id=* search=search* OR search=rtsearch* search!=*_internal* search!=*_audit* | sort - total_run_time | fields - search_id | head 10000</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+</form>
