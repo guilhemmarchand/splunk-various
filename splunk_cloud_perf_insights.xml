@@ -9,13 +9,43 @@
         <latest>now</latest>
       </default>
     </input>
+    <input type="text" token="sh_filter" searchWhenChanged="true">
+      <label>SH filter</label>
+      <default>host=sh*.splunkcloud.com</default>
+      <initialValue>host=sh*.splunkcloud.com</initialValue>
+    </input>
+    <input type="text" token="idx_filter" searchWhenChanged="true">
+      <label>Indexers filter</label>
+      <default>host=idx*.splunkcloud.com</default>
+      <initialValue>host=idx*.splunkcloud.com</initialValue>
+    </input>
+    <input type="text" token="license_filter" searchWhenChanged="true">
+      <label>License filter</label>
+      <default>host=*.splunkcloud.com</default>
+      <initialValue>host=*.splunkcloud.com</initialValue>
+    </input>    
+    <input type="text" token="adhoc_sh_regex" searchWhenChanged="true">
+      <label>Ad-hocs search-heads regex</label>
+      <default>TBD</default>
+      <initialValue>TBD</initialValue>
+    </input>
+    <input type="text" token="itsi_sh_regex" searchWhenChanged="true">
+      <label>ITSI search-heads regex</label>
+      <default>TBD</default>
+      <initialValue>sh-i-0745995aff8f432be</initialValue>
+    </input>
+    <input type="text" token="es_sh_regex" searchWhenChanged="true">
+      <label>ES search-heads regex</label>
+      <default>TBD</default>
+      <initialValue>sh-i-05cc16d6ea03cb32b</initialValue>
+    </input>
   </fieldset>
   <row>
     <panel>
       <chart>
         <title>Average CPU search heads</title>
         <search>
-          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide host=sh*.splunkcloud.com
+          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide $sh_filter$
 | eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
 | bucket _time span=1m
 | stats avg(cpu_total_pct) as avg by _time, host
@@ -34,7 +64,7 @@
       <chart>
         <title>perc95 CPU indexers</title>
         <search>
-          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide host=idx*.splunkcloud.com
+          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide $idx_filter$
 | eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
 | bucket _time span=1m
 | stats avg(cpu_total_pct) as avg by _time, host
@@ -55,12 +85,12 @@
       <chart>
         <title>Search heads CPUs usage</title>
         <search>
-          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide host=sh*.splunkcloud.com
+          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide $sh_filter$
 | eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
 | eval search_head_type=case(
-match(host, "(sh-i-xxxx|sh-i-xxxx)"), "Adhoc",
-match(host, "sh-i-xxxxx"), "ITSI",
-match(host, "sh-i-xxxxx"), "ES",
+match(host, "($adhoc_sh_regex$)"), "Adhoc",
+match(host, "($itsi_sh_regex$)"), "ITSI",
+match(host, "($es_sh_regex$)"), "ES",
 match(host, ".*"), "Unknown")
 | eval key = search_head_type . ":" . host
 | timechart span="5m" limit=40 avg(cpu_total_pct) as cpu_total_pct by key</query>
@@ -111,7 +141,7 @@ match(host, ".*"), "Unknown")
       <chart>
         <title>Indexers CPUs usage</title>
         <search>
-          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide host=idx*.splunkcloud.com
+          <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide $idx_filter$
 | eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
 | timechart useother=f limit=40 span="5m" avg(cpu_total_pct) as cpu_total_pct by host</query>
           <earliest>$time.earliest$</earliest>
@@ -161,7 +191,7 @@ match(host, ".*"), "Unknown")
       <chart>
         <title>CPU units used by type of search</title>
         <search>
-          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host=idx*.splunkcloud.com
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | timechart span="5m" limit=40 sum(pct_cpu) as pct_pu by data.search_props.type
 </query>
@@ -180,7 +210,7 @@ match(host, ".*"), "Unknown")
       <chart>
         <title>CPU units used by search head</title>
         <search>
-          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host=idx*.splunkcloud.com
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | timechart span="5m" limit=40 sum(pct_cpu) as pct_pu by data.search_props.search_head</query>
           <earliest>$time.earliest$</earliest>
@@ -199,13 +229,13 @@ match(host, ".*"), "Unknown")
       <chart>
         <title>CPU units used by type of search head (Adhoc vs ES vs ITSI)</title>
         <search>
-          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host=idx*.splunkcloud.com
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | rename data.search_props.search_head as search_head
 | eval search_head_type=case(
-match(search_head, "(sh-i-xxxx|sh-i-xxxx)"), "Adhoc",
-match(search_head, "sh-i-xxxxx"), "ITSI",
-match(search_head, "sh-i-xxxx"), "ES",
+match(search_head, "($adhoc_sh_regex$)"), "Adhoc",
+match(search_head, "($itsi_sh_regex$)"), "ITSI",
+match(search_head, "($es_sh_regex$)"), "ES",
 match(search_head, ".*"), "Unknown")
 | timechart span="5m" limit=45 sum(pct_cpu) as pct_pu by search_head_type</query>
           <earliest>$time.earliest$</earliest>
@@ -224,13 +254,13 @@ match(search_head, ".*"), "Unknown")
       <chart>
         <title>CPU units used by type of search head / type of search</title>
         <search>
-          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host=idx*.splunkcloud.com
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | rename data.search_props.search_head as search_head, data.search_props.type as type
 | eval search_head_type=case(
-match(search_head, "(sh-i-xxxx|sh-i-xxxx)"), "Adhoc",
-match(search_head, "sh-i-xxxx"), "ITSI",
-match(search_head, "sh-i-xxxx"), "ES",
+match(search_head, "($adhoc_sh_regex$)"), "Adhoc",
+match(search_head, "($itsi_sh_regex$)"), "ITSI",
+match(search_head, "($es_sh_regex$)"), "ES",
 match(search_head, ".*"), "Unknown")
 | eval key = search_head_type . ":" . type
 | timechart span="5m" limit=40 sum(pct_cpu) as pct_pu by key</query>
@@ -247,10 +277,44 @@ match(search_head, ".*"), "Unknown")
   </row>
   <row>
     <panel>
+      <input type="dropdown" token="splunk_system_user" searchWhenChanged="true">
+        <label>Include/Exclude:</label>
+        <choice value="user=*">Include</choice>
+        <choice value="user!=splunk-system-user">Exclude</choice>
+        <default>user=*</default>
+        <initialValue>user=*</initialValue>
+      </input>
+      <input type="dropdown" token="admin_user" searchWhenChanged="true">
+        <label>Include/Exclude:</label>
+        <choice value="user=*">Include</choice>
+        <choice value="user!=admin">Exclude</choice>
+        <default>user=*</default>
+        <initialValue>user=*</initialValue>
+      </input>
+      <chart>
+        <title>CPU units used by user (top 40)</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head, data.search_props.user
+| rename data.search_props.user as user | search $splunk_system_user$ $admin_user$
+| timechart span="5m" limit=40 useother=f sum(pct_cpu) as pct_pu by user</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
       <chart>
         <title>Ingestion volume (MB)</title>
         <search>
-          <query>index=_internal source=*license_usage.log* type=Usage host=*.splunkcloud.com | eval MB=round((b/1024/1024),2) | where MB&gt;0 | bucket _time span=1m | stats sum(MB) AS MB by _time,idx
+          <query>index=_internal source=*license_usage.log* type=Usage $license_filter$ | eval MB=round((b/1024/1024),2) | where MB&gt;0 | bucket _time span=1m | stats sum(MB) AS MB by _time,idx
 | timechart limit=45 span=30m sum(MB) AS volume_MB by idx | addtotals fieldname=Total_MB | where isnotnull(Total_MB)</query>
           <earliest>$time.earliest$</earliest>
           <latest>$time.latest$</latest>
@@ -326,7 +390,7 @@ match(search_head, ".*"), "Unknown")
       </input>
       <chart>
         <search>
-          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue
+          <query>index=_internal sourcetype=splunkd source=*metrics.log $idx_filter$ group=queue
 | eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
 | eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
 | eval fill_perc=round((curr/max)*100,2)
@@ -366,7 +430,7 @@ match(search_head, ".*"), "Unknown")
       <title>indexqueue</title>
       <chart>
         <search>
-          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=indexqueue
+          <query>index=_internal sourcetype=splunkd source=*metrics.log $idx_filter$ group=queue name=indexqueue
 | eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
 | eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
 | eval fill_perc=round((curr/max)*100,2)
@@ -405,7 +469,7 @@ match(search_head, ".*"), "Unknown")
       <title>parsingqueue</title>
       <chart>
         <search>
-          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=parsingqueue
+          <query>index=_internal sourcetype=splunkd source=*metrics.log $idx_filter$ group=queue name=parsingqueue
 | eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
 | eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
 | eval fill_perc=round((curr/max)*100,2)
@@ -446,7 +510,7 @@ match(search_head, ".*"), "Unknown")
       <title>aggqueue</title>
       <chart>
         <search>
-          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=aggqueue
+          <query>index=_internal sourcetype=splunkd source=*metrics.log $idx_filter$ group=queue name=aggqueue
 | eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
 | eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
 | eval fill_perc=round((curr/max)*100,2)
@@ -485,7 +549,7 @@ match(search_head, ".*"), "Unknown")
       <title>httpinputq</title>
       <chart>
         <search>
-          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=httpinputq
+          <query>index=_internal sourcetype=splunkd source=*metrics.log $idx_filter$ group=queue name=httpinputq
 | eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
 | eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
 | eval fill_perc=round((curr/max)*100,2)
@@ -526,7 +590,7 @@ match(search_head, ".*"), "Unknown")
       <title>typingqueue</title>
       <chart>
         <search>
-          <query>index=_internal sourcetype=splunkd source=*metrics.log host=idx*.splunkcloud.com group=queue name=typingqueue
+          <query>index=_internal sourcetype=splunkd source=*metrics.log $idx_filter$ group=queue name=typingqueue
 | eval max=if(isnotnull(max_size_kb),max_size_kb,max_size)
 | eval curr=if(isnotnull(current_size_kb),current_size_kb,current_size)
 | eval fill_perc=round((curr/max)*100,2)
@@ -568,7 +632,7 @@ match(search_head, ".*"), "Unknown")
       <chart>
         <title>top search concurrency by user (stacked)</title>
         <search>
-          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) host=sh*.splunkcloud.com
+          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) $sh_filter$
 | eval search_id=if(isnull(search_id),id,search_id) 
 | replace '*' with * in search_id 
 | search search_id!=rt_* 
@@ -589,7 +653,7 @@ match(search_head, ".*"), "Unknown")
       <chart>
         <title>top search concurrency for all</title>
         <search>
-          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) host=sh*.splunkcloud.com
+          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) $sh_filter$
 | eval search_id=if(isnull(search_id),id,search_id) 
 | replace '*' with * in search_id 
 | search search_id!=rt_* 
@@ -609,14 +673,14 @@ match(search_head, ".*"), "Unknown")
       <chart>
         <title>top search concurrency by type of search head</title>
         <search>
-          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) host=sh*.splunkcloud.com
+          <query>(user!=admin user!="n/a" user!=splunk-system-user user!=splunk-system-user action=search index=_audit (id=* OR search_id=*) search) $sh_filter$
 | eval search_id=if(isnull(search_id),id,search_id) 
 | replace '*' with * in search_id 
 | search search_id!=rt_*
 | eval search_head_type=case(
-match(host, "(sh-xxxxx)"), "Adhoc",
-match(host, "sh-xxxxx"), "ITSI",
-match(host, "sh-xxxxx"), "ES",
+match(host, "($adhoc_sh_regex$)"), "Adhoc",
+match(host, "($itsi_sh_regex$)"), "ITSI",
+match(host, "($es_sh_regex$)"), "ES",
 match(host, ".*"), "Unknown")
 | eval key = search_head_type . ":" . host
 | timechart limit=45 useother=f dc(search_id) as dcount by key</query>
@@ -653,7 +717,7 @@ match(host, ".*"), "Unknown")
       <chart>
         <title>Top users by total search run time</title>
         <search>
-          <query>index=_audit action=search (id=* OR search_id=*) host=sh*.splunkcloud.com
+          <query>index=_audit action=search (id=* OR search_id=*) $sh_filter$
 | eval search_id = if(isnull(search_id), id, search_id)
 | replace '*' with * in search_id | rex "search='(?&lt;search&gt;.*?)', autojoin" | convert num(total_run_time) | eval user = if(user="n/a", null(), user)
 | stats min(_time) as _time first(user) as user max(total_run_time) as total_run_time first(search) as search first(apiStartTime) as "Earliest time" first(apiEndTime) as "Latest time" by search_id
@@ -674,7 +738,7 @@ match(host, ".*"), "Unknown")
       <chart>
         <title>Top users by avg run time</title>
         <search>
-          <query>index=_audit action=search (id=* OR search_id=*) host=sh*.splunkcloud.com
+          <query>index=_audit action=search (id=* OR search_id=*) $sh_filter$
 | eval search_id = if(isnull(search_id), id, search_id)
 | replace '*' with * in search_id | rex "search='(?&lt;search&gt;.*?)', autojoin" | convert num(total_run_time) | eval user = if(user="n/a", null(), user)
 | stats min(_time) as _time first(user) as user max(total_run_time) as total_run_time first(search) as search first(apiStartTime) as "Earliest time" first(apiEndTime) as "Latest time" by search_id
@@ -694,7 +758,7 @@ match(host, ".*"), "Unknown")
       <table>
         <title>Run time expensive searches</title>
         <search>
-          <query>index=_audit action=search (id=* OR search_id=*) host=sh*.splunkcloud.com
+          <query>index=_audit action=search (id=* OR search_id=*) $sh_filter$
 | eval search_id = if(isnull(search_id), id, search_id)
 | replace '*' with * in search_id | rex "search='(?&lt;search&gt;.*?)', autojoin" | convert num(total_run_time) | eval user = if(user="n/a", null(), user)
 | stats min(_time) as _time first(user) as user max(total_run_time) as total_run_time first(search) as search first(apiStartTime) as "Earliest time" first(apiEndTime) as "Latest time" by search_id
