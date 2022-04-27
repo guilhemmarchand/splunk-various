@@ -9,6 +9,16 @@ import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+__name__ = "export_to_hec.py"
+__author__ = "Guilhem Marchand"
+__copyright__ = "Apache 2.0"
+__credits__ = ["Guilhem Marchand"]
+__license__ = "Apache 2.0"
+__version__ = "0.1.0"
+__maintainer__ = "Guilhem Marchand"
+__email__ = "support@trackme-solutions.com"
+__status__ = "PRODUCTION"
+
 # set logging
 splunkhome = '/opt/splunk'
 log_file = "export_myexport.log"
