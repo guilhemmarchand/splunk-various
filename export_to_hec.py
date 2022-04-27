@@ -33,12 +33,20 @@ log.addHandler(filehandler)      # set the new handler
 # set the log level to INFO, DEBUG as the default is ERROR
 log.setLevel(logging.INFO)
 
+# How to use:
+# Ideally run this script as the Splunk user, which allows writting the log file to the Splunk var location leading it to be indexed transparently
+# Run this script in the background once it is configured, ex:
+# nohup python3 export_to_hec.py &
+
+# Provide the search head targets (if multiple provide as a list, example below with an SHC)
 HOST = ["sh1", "sh2", "sh3"]
+# Splunkd port
 PORT = 8089
+# Credentials
 USERNAME = "mylogin"
 PASSWORD = "mypassword"
 
-# HEC
+# HEC target and token
 url = "https://myhectarget.mydomain.com:8088/services/collector/event"
 authHeader = {'Authorization': 'Splunk MY_HEC_TOKEN'}
 
@@ -69,7 +77,7 @@ total_eventcount = 0
 total_successes = 0
 total_failures = 0
 
-# store failure batches
+# store failure batches, any HEC permanently failed batch will be added to this file, allowing for a manual replay
 failure_output_file = 'myexport_restore_failures.json'
 
 #
