@@ -16,7 +16,7 @@ __credits__ = ["Guilhem Marchand"]
 __license__ = "Apache 2.0"
 __version__ = "0.1.0"
 __maintainer__ = "Guilhem Marchand"
-__email__ = "guilhem.marchand@gmail.com"
+__email__ = "gmarchand@splunk.com"
 __status__ = "PRODUCTION"
 
 # set logging
