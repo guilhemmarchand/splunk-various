@@ -1,0 +1,19 @@
+props.conf
+
+for a sourcetype
+
+[<spec>]
+TRANSFORMS-routing=<transforms_stanza_name>
+
+for a source
+
+[source::<spec>]
+TRANSFORMS-routing=clone-group
+
+
+transforms.conf
+
+[clone-group]
+REGEX=.*
+DEST_KEY=_TCP_ROUTING
+FORMAT=<target_group>,<target_group>
