@@ -192,6 +192,7 @@ while epoch_start < epoch_end:
 
                             else:
                                 logging.warning("temporary failure forwarding to HEC failed with error code=\"{}\" and response=\"{}\"".format(response.status_code, response.text))
+                                time.sleep(10)
 
                         else:
 
@@ -218,6 +219,7 @@ while epoch_start < epoch_end:
 
                         else:
                             logging.warning("tempoary forwarding to HEC failed with exception=\"{}\"".format(e))
+                            time.sleep(10)
 
 
             summary_results = {
@@ -249,6 +251,7 @@ while epoch_start < epoch_end:
                 sys.exit(1)
             else:
                 logging.warning("temporary failure while attempting to run the Splunk search with exception=\"{}\"".format(e))
+                time.sleep(10)
 
 #
 # END
