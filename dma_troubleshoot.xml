@@ -1,5 +1,5 @@
 <form theme="dark">
-  <label>GSOC - Datamodel acceleration overview</label>
+  <label>Datamodel acceleration overview</label>
   <fieldset submitButton="false">
     <input type="time" token="time">
       <label></label>
