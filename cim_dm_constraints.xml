@@ -112,7 +112,7 @@ title="cim_Web_indexes", "Web"
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <drilldown>
-          <link target="_blank">/app/detect_aa_siem_management/search?q=search%20$row.definition$%20$row.tag_constraint$%7C%20stats%20count%2C%20values%28eventtype%29%20as%20eventtype%2C%20values%28tag%29%20as%20tag%20by%20index%2C%20sourcetype%20%7C%20eventstats%20sum%28count%29%20as%20total_count%20by%20index%20%7C%20eval%20percent%3Dround%28count%2Ftotal_count%2A100%2C%202%29%20.%20%22%25%22%2C%20sourcetype_summary%3Dsourcetype%20.%20%22%20%7C%20%22%20.%20percent%20.%20%22%20%28count%3A%20%22%20.%20count%20.%20%22%29%22%20%7C%20stats%20values%28sourcetype_summary%29%20as%20sourcetype%2C%20values%28eventtype%29%20as%20eventtype%2C%20values%28tag%29%20as%20tag%20by%20index</link>
+          <link target="_blank">/app/search/search?q=search%20$row.definition$%20$row.tag_constraint$%7C%20stats%20count%2C%20values%28eventtype%29%20as%20eventtype%2C%20values%28tag%29%20as%20tag%20by%20index%2C%20sourcetype%20%7C%20eventstats%20sum%28count%29%20as%20total_count%20by%20index%20%7C%20eval%20percent%3Dround%28count%2Ftotal_count%2A100%2C%202%29%20.%20%22%25%22%2C%20sourcetype_summary%3Dsourcetype%20.%20%22%20%7C%20%22%20.%20percent%20.%20%22%20%28count%3A%20%22%20.%20count%20.%20%22%29%22%20%7C%20stats%20values%28sourcetype_summary%29%20as%20sourcetype%2C%20values%28eventtype%29%20as%20eventtype%2C%20values%28tag%29%20as%20tag%20by%20index</link>
         </drilldown>
       </table>
     </panel>
