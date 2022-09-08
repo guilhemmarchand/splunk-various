@@ -1,0 +1,116 @@
+<form theme="dark">
+  <label>Enterprise Security - Correlation Searches investigator</label>
+  <fieldset submitButton="false">
+    <input type="time" token="time" searchWhenChanged="true">
+      <label>Time range:</label>
+      <default>
+        <earliest>-4h@m</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="multiselect" token="tk_cr" searchWhenChanged="true">
+      <label>Filter CR:</label>
+      <choice value="*">ANY</choice>
+      <valuePrefix>savedsearch_name="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+      <fieldForLabel>title</fieldForLabel>
+      <fieldForValue>title</fieldForValue>
+      <search>
+        <query>| rest splunk_server=local count=0 /servicesNS/-/SplunkEnterpriseSecuritySuite/saved/searches | where match('action.correlationsearch.enabled', "1|[Tt]|[Tt][Rr][Uu][Ee]") | where disabled=0
+| eval actions=split(actions, ",")
+| rename eai:acl.app as app, eai:acl.owner as owner, eai:acl.app as app, action.correlationsearch.label as csearch_label, action.notable.param.security_domain as security_domain
+| stats count by title
+| sort 0 title</query>
+        <earliest>-15m</earliest>
+        <latest>now</latest>
+      </search>
+      <initialValue>*</initialValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <single>
+        <search>
+          <query>| rest splunk_server=local count=0 /servicesNS/-/SplunkEnterpriseSecuritySuite/saved/searches | where match('action.correlationsearch.enabled', "1|[Tt]|[Tt][Rr][Uu][Ee]") | where disabled=0
+| eval actions=split(actions, ",")
+| rename eai:acl.app as app, eai:acl.owner as owner, eai:acl.app as app, action.correlationsearch.label as csearch_label, action.notable.param.security_domain as security_domain
+| stats dc(title) as dcount</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x006d9c","0x006d9c"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="underLabel">ENABLED CORRELATION SEARCHES</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Correlation searches average run time over time</title>
+        <search>
+          <query>index=_internal sourcetype=scheduler host=* status="*" AND status!="continued" app="*" [ | rest splunk_server=local count=0 /servicesNS/-/SplunkEnterpriseSecuritySuite/saved/searches | where match('action.correlationsearch.enabled', "1|[Tt]|[Tt][Rr][Uu][Ee]") | where disabled=0 | fields title | rename title as savedsearch_name ] $tk_cr$
+| timechart minspan=10m limit=45 useother=f avg(run_time) as run_time by savedsearch_name</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Click on a row to see the scheduler logs for a given correlation search</title>
+        <search>
+          <query>(index=_internal sourcetype=scheduler host=* app="*") [ | rest splunk_server=local count=0 /servicesNS/-/SplunkEnterpriseSecuritySuite/saved/searches | where match('action.correlationsearch.enabled', "1|[Tt]|[Tt][Rr][Uu][Ee]") | where disabled=0 | fields title | rename title as savedsearch_name ] $tk_cr$
+| eval alert_actions=if((isnull(alert_actions) OR (alert_actions == "")),"none",alert_actions) 
+| eval status=case(((status == "success") OR (status == "completed")),"completed",(status == "skipped"),"skipped",(status == "continued"),"deferred") 
+| search (status="completed" OR status="deferred" OR status="skipped") 
+| stats count(eval(status=="completed")) as count_completed, count(eval(status=="skipped")) as count_skipped, count by savedsearch_name 
+| eval "% completed"=round(((count_completed / count) * 100),2) 
+| eval "% completed"=if('% completed'==100, "✅ " . '% completed', "❌ " . '% completed') 
+| sort 0 savedsearch_name
+
+```Get CR config and information from REST ```
+| join type=outer savedsearch_name [ | rest splunk_server=local count=0 /servicesNS/-/SplunkEnterpriseSecuritySuite/saved/searches | where match('action.correlationsearch.enabled', "1|[Tt]|[Tt][Rr][Uu][Ee]") | where disabled=0 | rename title as savedsearch_name
+| eval actions=split(actions, ",")
+| rename eai:acl.app as app, eai:acl.owner as owner, eai:acl.app as app, action.correlationsearch.label as csearch_label, action.notable.param.security_domain as security_domain
+| table savedsearch_name, owner, csearch_label, app, security_domain, actions, cron_schedule, next_scheduled_time, schedule_window ]
+
+```Get performance CR execution perf statistics```
+| join type=outer savedsearch_name [ search index=_internal sourcetype=scheduler host=* status="*" AND status!="continued" app="*" [ | rest splunk_server=local count=0 /servicesNS/-/SplunkEnterpriseSecuritySuite/saved/searches | where match('action.correlationsearch.enabled', "1|[Tt]|[Tt][Rr][Uu][Ee]") | where disabled=0 | fields title | rename title as savedsearch_name ] $tk_cr$
+| stats avg(run_time) AS avg_run_time, max(run_time) AS max_run_time, latest(run_time) AS latest_run_time, max(_time) AS "last_run (dd/mm/YYYY H:M:S)" by app,savedsearch_name 
+| eval "last_run (dd/mm/YYYY H:M:S)"=strftime('last_run (dd/mm/YYYY H:M:S)', "%d/%m/%Y %H:%M:%S") 
+| foreach *_run_time [ eval &lt;&lt;FIELD&gt;&gt;=round('&lt;&lt;FIELD&gt;&gt;', 2) ] 
+| sort - avg_run_time
+| eval duration_avg=tostring(avg_run_time, "duration"), duration_max=tostring(max_run_time, "duration"), duration_latest=tostring(latest_run_time, "duration") 
+| eval "Avg run time (seconds / duration)" = avg_run_time + " sec / " + duration_avg + " (HH:MM:SSS)" 
+| eval "Max run time (seconds / duration)" = max_run_time + " sec / " + duration_avg + " (HH:MM:SSS)" 
+| eval "Latest run time (seconds / duration)" = latest_run_time + " sec / " + duration_avg + " (HH:MM:SSS)" 
+| fields savedsearch_name, Avg*, Max*, Latest*, "last_run (dd/mm/YYYY H:M:S)", avg_run_time, cron_schedule
+| sort savedsearch_name | fields - avg_run_time ]</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <drilldown>
+          <link target="_blank">search?q=(index%3D_internal%20sourcetype%3Dscheduler%20host%3D*%20app%3D%22*%22)%20savedsearch_name%3D%22$row.savedsearch_name$%22&amp;earliest=$time.earliest$&amp;latest=$time.latest$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>
