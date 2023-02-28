@@ -1,0 +1,211 @@
+<form version="1.1" theme="dark">
+  <label>SPLK - Search performance investigator</label>
+  <search id="baseSearch">
+    <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host="*" | stats count by data.search_props.user, data.search_props.app, data.search_props.label</query>
+    <earliest>$time.earliest$</earliest>
+    <latest>$time.latest$</latest>
+  </search>
+  <fieldset submitButton="false">
+    <input type="time" token="time" searchWhenChanged="true">
+      <label>Time</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="user" searchWhenChanged="true">
+      <label>User</label>
+      <fieldForLabel>data.search_props.user</fieldForLabel>
+      <fieldForValue>data.search_props.user</fieldForValue>
+      <search base="baseSearch">
+        <query>stats count by data.search_props.user | sort limit=0 data.search_props.user</query>
+      </search>
+      <choice value="*">ANY</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="dropdown" token="app" searchWhenChanged="true">
+      <label>App</label>
+      <fieldForLabel>data.search_props.app</fieldForLabel>
+      <fieldForValue>data.search_props.app</fieldForValue>
+      <search base="baseSearch">
+        <query>search data.search_props.user="$user$" | stats count by data.search_props.app | sort limit=0 data.search_props.app</query>
+      </search>
+      <choice value="*">ANY</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="dropdown" token="label" searchWhenChanged="true">
+      <label>Search</label>
+      <fieldForLabel>data.search_props.label</fieldForLabel>
+      <fieldForValue>data.search_props.label</fieldForValue>
+      <search base="baseSearch">
+        <query>search data.search_props.user="$user$" data.search_props.app="$app$" | stats count by data.search_props.label | sort limit=0 data.search_props.label</query>
+      </search>
+      <choice value="*">ANY</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>scheduler run time</title>
+      <chart>
+        <search>
+          <query>index=_internal host="*" source=*scheduler.log status="*" AND status!="continued" user="$user$" app="$app$" host="*" savedsearch_name="$label$"
+| timechart limit=40 span=30m avg(run_time) as avg_run_time by savedsearch_name</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Scheduler overall statistics</title>
+      <table>
+        <search>
+          <query>index=_internal host="*" source=*scheduler.log status="*" AND status!="continued" user="$user$" app="$app$" host="*" savedsearch_name="$label$"
+| stats count, avg(run_time) AS avg_run_time, max(run_time) AS max_run_time, latest(run_time) AS latest_run_time, max(_time) AS "last_run (dd/mm/YYYY H:M:S)" by app,savedsearch_name
+| stats first(*) as "*" by app, savedsearch_name
+| eval "last_run (dd/mm/YYYY H:M:S)"=strftime('last_run (dd/mm/YYYY H:M:S)', "%d/%m/%Y %H:%M:%S")
+| foreach *_run_time [ eval &lt;&lt;FIELD&gt;&gt;=round('&lt;&lt;FIELD&gt;&gt;', 2) ]
+| sort - avg_run_time | rename savedsearch_name AS "report (savedsearch_name)"
+| eval duration_avg=tostring(avg_run_time, "duration"), duration_max=tostring(max_run_time, "duration"), duration_latest=tostring(latest_run_time, "duration")
+| eval "Avg run time (seconds / duration)" = avg_run_time + " sec / " + duration_avg + " (HH:MM:SSS)"
+| eval "Max run time (seconds / duration)" = max_run_time + " sec / " + duration_avg + " (HH:MM:SSS)"
+| eval "Latest run time (seconds / duration)" = latest_run_time + " sec / " + duration_avg + " (HH:MM:SSS)"
+| fields app,report*,count,Avg*,Max*,Latest*,"last_run (dd/mm/YYYY H:M:S)", avg_run_time
+| fields - avg_run_time</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Introspection elapsed</title>
+      <chart>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host="*" data.search_props.user="$user$" data.search_props.app="$app$" data.search_props.label="$label$"
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type
+
+| timechart limit=40 avg(elapsed) as elapsed by data.search_props.label</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>introspection CPU used</title>
+      <chart>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host="*" data.search_props.user="$user$" data.search_props.app="$app$" data.search_props.label="$label$"
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type
+
+| timechart limit=40 span=30m avg(pct_cpu) as pct_cpu by data.search_props.label</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>introspection MEM read / written</title>
+      <chart>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host="*" data.search_props.user="$user$" data.search_props.app="$app$" data.search_props.label="$label$"
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type
+
+| timechart limit=40 avg(read_mb) as read_mb avg(written_mb) as written_mb by data.search_props.label</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>introspection MEM used</title>
+      <chart>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host="*" data.search_props.user="$user$" data.search_props.app="$app$" data.search_props.label="$label$"
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type
+
+| timechart limit=40 span=30m avg(pct_memory) as pct_memory by data.search_props.label</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Introspection file descriptors used</title>
+      <chart>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" host="*" data.search_props.user="$user$" data.search_props.app="$app$" data.search_props.label="$label$"
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type
+
+| timechart limit=40 avg(fd_used) as fd_used by data.search_props.label</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+</form>
