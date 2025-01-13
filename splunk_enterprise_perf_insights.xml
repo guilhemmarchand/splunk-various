@@ -11,23 +11,23 @@
     </input>
     <input type="text" token="cm_filter" searchWhenChanged="true">
       <label>CM filter</label>
-      <default>host=cm*</default>
-      <initialValue>host=cm*</initialValue>
+      <default>host=prd1-cl-cm*</default>
+      <initialValue>host=prd1-cl-cm*</initialValue>
     </input>
     <input type="text" token="sh_filter" searchWhenChanged="true">
       <label>SH filter</label>
-      <default>host=*</default>
-      <initialValue>host=*</initialValue>
+      <default>host=prd1-cl-sh*</default>
+      <initialValue>host=prd1-cl-sh*</initialValue>
     </input>
     <input type="text" token="idx_filter" searchWhenChanged="true">
       <label>Indexers filter</label>
-      <default>host=*</default>
-      <initialValue>host=*</initialValue>
+      <default>host=prd1-cl-idx*</default>
+      <initialValue>host=prd1-cl-idx*</initialValue>
     </input>
     <input type="text" token="license_filter" searchWhenChanged="true">
       <label>License filter</label>
-      <default>host=*</default>
-      <initialValue>host=*</initialValue>
+      <default>host=prd1-cl-ds-lm1</default>
+      <initialValue>host=prd1-cl-ds-lm1</initialValue>
     </input>
     <input type="text" token="adhoc_sh_regex" searchWhenChanged="true">
       <label>Ad-hocs search-heads regex</label>
@@ -262,6 +262,15 @@ match(host, ".*"), "Unknown")
   </row>
   <row>
     <panel>
+      <html>
+        <div style="text-align: center;">
+          <h2>CPU units</h2>
+        </div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
       <chart>
         <title>CPU units used by type of search</title>
         <search>
@@ -372,6 +381,138 @@ match(search_head, ".*"), "Unknown")
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head, data.search_props.user
 | rename data.search_props.user as user | search $splunk_system_user$ $admin_user$
 | timechart span="5m" limit=40 useother=f sum(pct_cpu) as pct_pu by user</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <div style="text-align: center;">
+          <h2>Memory units</h2>
+        </div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Memory units used by type of search</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
+| timechart span="5m" limit=40 sum(pct_memory) as pct_memory by data.search_props.type
+</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Memory units used by search head</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
+| timechart span="5m" limit=40 sum(pct_memory) as pct_memory by data.search_props.search_head</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Memory units used by type of search head (Adhoc vs ES vs ITSI)</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
+| rename data.search_props.search_head as search_head
+| eval search_head_type=case(
+match(search_head, "($adhoc_sh_regex$)"), "Adhoc",
+match(search_head, "($itsi_sh_regex$)"), "ITSI",
+match(search_head, "($es_sh_regex$)"), "ES",
+match(search_head, ".*"), "Unknown")
+| timechart span="5m" limit=45 sum(pct_memory) as pct_memory by search_head_type</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Memory units used by type of search head / type of search</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
+| rename data.search_props.search_head as search_head, data.search_props.type as type
+| eval search_head_type=case(
+match(search_head, "($adhoc_sh_regex$)"), "Adhoc",
+match(search_head, "($itsi_sh_regex$)"), "ITSI",
+match(search_head, "($es_sh_regex$)"), "ES",
+match(search_head, ".*"), "Unknown")
+| eval key = search_head_type . ":" . type
+| timechart span="5m" limit=40 sum(pct_memory) as pct_memory by key</query>
+          <earliest>$time.earliest$</earliest>
+          <latest>$time.latest$</latest>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">350</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="dropdown" token="splunk_system_user" searchWhenChanged="true">
+        <label>Include/Exclude:</label>
+        <choice value="user=*">Include</choice>
+        <choice value="user!=splunk-system-user">Exclude</choice>
+        <default>user=*</default>
+        <initialValue>user=*</initialValue>
+      </input>
+      <input type="dropdown" token="admin_user" searchWhenChanged="true">
+        <label>Include/Exclude:</label>
+        <choice value="user=*">Include</choice>
+        <choice value="user!=admin">Exclude</choice>
+        <default>user=*</default>
+        <initialValue>user=*</initialValue>
+      </input>
+      <chart>
+        <title>Memory units used by user (top 40)</title>
+        <search>
+          <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head, data.search_props.user
+| rename data.search_props.user as user | search $splunk_system_user$ $admin_user$
+| timechart span="5m" limit=40 useother=f sum(pct_memory) as pct_memory by user</query>
           <earliest>$time.earliest$</earliest>
           <latest>$time.latest$</latest>
         </search>
