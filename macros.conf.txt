@@ -2,7 +2,6 @@
 [get_dm_tag_constraint(1)]
 definition = join type=outer [ | datamodel $datamodel$\
 \
-`comment("---- Get the _raw ----")`\
 | table _raw\
 | fields _raw\
 \
