@@ -1,4 +1,4 @@
-<dashboard theme="dark">
+<dashboard theme="dark" version="1.1">
   <label>Splunk SA CIM - Data models macro constraints reporting</label>
   <row>
     <panel>
