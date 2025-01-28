@@ -42,9 +42,6 @@
       <search base="baseSearch">
         <query>search data.search_props.user="$user$" data.search_props.app="$app$" | stats count by data.search_props.label | sort limit=0 data.search_props.label</query>
       </search>
-      <choice value="*">ANY</choice>
-      <default>*</default>
-      <initialValue>*</initialValue>
     </input>
   </fieldset>
   <row>
