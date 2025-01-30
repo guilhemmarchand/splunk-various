@@ -275,6 +275,7 @@ match(host, ".*"), "Unknown")
         <title>CPU units used by type of search</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | timechart span="5m" limit=40 sum(pct_cpu) as pct_pu by data.search_props.type
 </query>
@@ -294,6 +295,7 @@ match(host, ".*"), "Unknown")
         <title>CPU units used by search head</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | timechart span="5m" limit=40 sum(pct_cpu) as pct_pu by data.search_props.search_head</query>
           <earliest>$time.earliest$</earliest>
@@ -313,6 +315,7 @@ match(host, ".*"), "Unknown")
         <title>CPU units used by type of search head (Adhoc vs ES vs ITSI)</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | rename data.search_props.search_head as search_head
 | eval search_head_type=case(
@@ -338,6 +341,7 @@ match(search_head, ".*"), "Unknown")
         <title>CPU units used by type of search head / type of search</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | rename data.search_props.search_head as search_head, data.search_props.type as type
 | eval search_head_type=case(
@@ -378,6 +382,7 @@ match(search_head, ".*"), "Unknown")
         <title>CPU units used by user (top 40)</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head, data.search_props.user
 | rename data.search_props.user as user | search $splunk_system_user$ $admin_user$
 | timechart span="5m" limit=40 useother=f sum(pct_cpu) as pct_pu by user</query>
@@ -407,6 +412,7 @@ match(search_head, ".*"), "Unknown")
         <title>Memory units used by type of search</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | timechart span="5m" limit=40 sum(pct_memory) as pct_memory by data.search_props.type
 </query>
@@ -426,6 +432,7 @@ match(search_head, ".*"), "Unknown")
         <title>Memory units used by search head</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | timechart span="5m" limit=40 sum(pct_memory) as pct_memory by data.search_props.search_head</query>
           <earliest>$time.earliest$</earliest>
@@ -445,6 +452,7 @@ match(search_head, ".*"), "Unknown")
         <title>Memory units used by type of search head (Adhoc vs ES vs ITSI)</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | rename data.search_props.search_head as search_head
 | eval search_head_type=case(
@@ -470,6 +478,7 @@ match(search_head, ".*"), "Unknown")
         <title>Memory units used by type of search head / type of search</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head
 | rename data.search_props.search_head as search_head, data.search_props.type as type
 | eval search_head_type=case(
@@ -510,6 +519,7 @@ match(search_head, ".*"), "Unknown")
         <title>Memory units used by user (top 40)</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=PerProcess data.process_type="search" $idx_filter$
+| fillnull data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type
 | stats sum(data.pct_cpu) as pct_cpu sum(data.pct_memory) as pct_memory, sum(data.fd_used) as fd_used, sum(data.page_faults) as page_faults, sum(data.read_mb) as read_mb, sum(data.written_mb) as written_mb latest(data.elapsed) as elapsed, latest("data.search_props.*") as "data.search_props.*" by _time, data.pid, data.process, data.process_type, data.search_props.label, data.search_props.type, data.search_props.search_head, data.search_props.user
 | rename data.search_props.user as user | search $splunk_system_user$ $admin_user$
 | timechart span="5m" limit=40 useother=f sum(pct_memory) as pct_memory by user</query>
