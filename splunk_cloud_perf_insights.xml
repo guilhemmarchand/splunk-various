@@ -23,7 +23,7 @@
       <label>License filter</label>
       <default>host=*.splunkcloud.com</default>
       <initialValue>host=*.splunkcloud.com</initialValue>
-    </input>    
+    </input>
     <input type="text" token="adhoc_sh_regex" searchWhenChanged="true">
       <label>Ad-hocs search-heads regex</label>
       <default>TBD</default>
@@ -43,7 +43,7 @@
   <row>
     <panel>
       <chart>
-        <title>Average CPU search heads</title>
+        <title>perc95 CPU search heads</title>
         <search>
           <query>index=_introspection sourcetype=splunk_resource_usage component=Hostwide $sh_filter$
 | eval cpu_total_pct=('data.cpu_system_pct'+'data.cpu_user_pct')
@@ -56,8 +56,8 @@
         </search>
         <option name="charting.chart">radialGauge</option>
         <option name="charting.chart.style">minimal</option>
-        <option name="refresh.display">progressbar</option>
         <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
       </chart>
     </panel>
     <panel>
@@ -75,8 +75,8 @@
         </search>
         <option name="charting.chart">radialGauge</option>
         <option name="charting.chart.style">minimal</option>
-        <option name="refresh.display">progressbar</option>
         <option name="height">250</option>
+        <option name="refresh.display">progressbar</option>
       </chart>
     </panel>
   </row>
@@ -692,24 +692,6 @@ match(host, ".*"), "Unknown")
         <option name="refresh.display">progressbar</option>
         <option name="height">350</option>
       </chart>
-    </panel>
-  </row>
-  <row>
-    <panel>
-      <table>
-        <title>roles and users</title>
-        <search>
-          <query>| rest /services/authentication/users splunk_server=local
-| fields title roles realname email | rename title as userName | rename realname as Name
-| search userName!="admin" userName="*" roles="*" userName="*" userName="*" | fields userName roles Name email
-| lookup roles_quota.csv title as roles
-| stats max(srchJobsQuota) as srchJobsQuota values(roles) as roles by userName Name email</query>
-          <earliest>$time.earliest$</earliest>
-          <latest>$time.latest$</latest>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="refresh.display">progressbar</option>
-      </table>
     </panel>
   </row>
   <row>
