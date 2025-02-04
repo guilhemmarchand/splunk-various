@@ -1,6 +1,6 @@
 <form version="1.1" theme="dark">
   <label>Splunk Cloud Performance insights</label>
-  <description>This dashboard exposes the main KPIs useful to understand the state and the level of resources usage in the nhsdigital Splunk Cloud stack</description>
+  <description>This dashboard exposes the main KPIs useful to understand the state and the level of resources usage in a Splunk Cloud stack</description>
   <fieldset submitButton="false" autoRun="true">
     <input type="time" token="time" searchWhenChanged="true">
       <label>time:</label>
